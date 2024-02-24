@@ -1,0 +1,13 @@
+/.venv/
+/.direnv/
+.env
+/_pycache_/
+*.deb
+*.pyc
+*.docx
+*.txt
+*.json
+*.text
+*.html
+!requirements.txt
+!config.json

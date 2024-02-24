@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Segregate Questions</title>
+  </head>
+  <body>
+    <h1>Segregate Questions</h1>
+    <form action="/segregate" method="post" enctype="multipart/form-data">
+      <label for="file">File to be Segreated(must be docx):</label>
+      <input type="file" name="file_to_segregate" required />
+      <br /><br />
+      <label for="file">Guideline File(must be xlsx):</label>
+      <input type="file" name="guideline_file" required />
+      <br /><br />
+      <input type="submit" value="Segregate" />
+    </form>
+  </body>
+</html>

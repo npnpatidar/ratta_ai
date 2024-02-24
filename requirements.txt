@@ -1,0 +1,45 @@
+# feedparser==6.0.11
+# configparser==6.0.0
+# openai==1.10.0
+# jinja2==3.1.3
+# beautifulsoup4==4.12.3
+g4f
+# xmltodict==0.13.0
+pyyaml
+feedparser==6.0.11
+configparser==6.0.0
+openai==1.10.0
+jinja2==3.1.3
+beautifulsoup4==4.12.3
+g4f==0.2.2.3
+xmltodict==0.13.0
+docx2txt
+# pypandoc
+pypandoc_binary
+latex
+pylatex
+python-docx
+fuzzywuzzy
+python-Levenshtein
+scikit-learn
+graphviz
+ollama
+tabulate
+pyDocx
+# torch
+pango
+# pygobject3
+pyth
+# aspose-words
+curl_cffi
+google-generativeai
+Flask
+indicparser
+gunicorn
+reportlab
+wand
+PyMuPDF
+pdflatex
+pdf2image
+pandas
+openpyxl

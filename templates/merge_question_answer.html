@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Merge Question Answer Document</title>
+  </head>
+  <body>
+    <h1>Merge Question Answer Document</h1>
+    <form action="/merge_question_answer" method="post" enctype="multipart/form-data">
+      <label for="file">Questions File (must be docx):</label>
+      <input type="file" name="questions_file" required />
+      <br /><br />
+      <label for="file">Answers File (must be docx):</label>
+      <input type="file" name="answers_file" required />
+      <br /><br />
+      <input type="submit" value="Merge" />
+    </form>
+  </body>
+</html>
