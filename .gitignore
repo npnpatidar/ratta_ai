@@ -2,12 +2,17 @@
 /.direnv/
 .env
 /_pycache_/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
 *.deb
 *.pyc
+*.log
 *.docx
 *.txt
 *.json
 *.text
 *.html
+/har_file/
 !requirements.txt
 !config.json

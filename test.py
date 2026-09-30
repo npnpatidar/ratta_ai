@@ -1,3 +1,4 @@
+"""Legacy manual examples (previously ran on import — now guarded). Prefer src.pipeline_docx + src.common."""
 # import ai
 import docx2html
 import ratta_functions
@@ -19,8 +20,13 @@ extra_folder = "/home/naresh/Work/Working/extra"
 
 # test questions format
 
-ratta_functions.process_folder_for_given_function(input_folder, json_folder, docx2html.convert_docx_to_json, 'files')
-ratta_functions.process_folder_for_given_function( json_folder, output_folder, docx2html.convert_json_to_docx, 'files')
+def main():
+    ratta_functions.process_folder_for_given_function(input_folder, json_folder, docx2html.convert_docx_to_json, "files")
+    ratta_functions.process_folder_for_given_function(json_folder, output_folder, docx2html.convert_json_to_docx, "files")
+
+
+if __name__ == "__main__":
+    main()
 
 # ratta_functions.get_initial_idea_of_files_from_a_folder_recursively(input_folder)
 # ratta_functions.get_initial_idea_of_files_from_a_folder_recursively(output_folder)
