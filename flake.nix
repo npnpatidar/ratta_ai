@@ -1,5 +1,5 @@
 {
-  description = "PyTorch with CUDA";
+  description = "Ratta AI — DOCX <-> JSON question pipeline dev shell";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -54,7 +54,9 @@
 
               # alias pip="uv pip"
 
-              uv pip install -r requirements.txt
+              # Install deps only when imports fail (keeps shell entry fast).
+              .venv/bin/python -c "import docx, bs4, pypandoc, genanki" 2>/dev/null \
+                || uv pip install -r requirements.txt
 
               figlet RAG started
             '';

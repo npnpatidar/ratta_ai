@@ -1,4 +1,5 @@
 /.venv/
+/.venv-audit/
 /.direnv/
 .env
 /_pycache_/
@@ -9,6 +10,7 @@ __pycache__/
 *.pyc
 *.log
 *.docx
+*.apkg
 *.txt
 *.json
 *.text

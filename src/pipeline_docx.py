@@ -44,10 +44,13 @@ def update_font_style_in_docx(input_file_path, output_file_path):
                     tcPr = tc.get_or_add_tcPr()
                     tcW = tcPr.get_or_add_tcW()
                     tcW.type = "auto"
-                    tcBorders = tcPr.find(qn("w:tcBorders"))
-                    if tcBorders is None:
-                        tcBorders = OxmlElement("w:tcBorders")
-                        tcPr.append(tcBorders)
+                    # Drop any existing borders first so re-running
+                    # on an already-styled file stays idempotent.
+                    old_borders = tcPr.find(qn("w:tcBorders"))
+                    if old_borders is not None:
+                        tcPr.remove(old_borders)
+                    tcBorders = OxmlElement("w:tcBorders")
+                    tcPr.append(tcBorders)
                     for border in ["top", "left", "bottom", "right"]:
                         tcBorder = OxmlElement(f"w:{border}")
                         tcBorder.set(qn("w:val"), "single")
@@ -60,8 +63,11 @@ def update_font_style_in_docx(input_file_path, output_file_path):
         for run in paragraph.runs:
             run.font.name = font_name
             run.font.size = Pt(font_size)
-            # Ensure the font name is set correctly
             rPr = run._element.get_or_add_rPr()
+            # Remove stale w:rFonts so re-styling doesn't stack
+            # duplicate elements on every run.
+            for old in rPr.findall(qn("w:rFonts")):
+                rPr.remove(old)
             rFonts = OxmlElement("w:rFonts")
             rFonts.set(qn("w:ascii"), font_name)
             rFonts.set(qn("w:hAnsi"), font_name)
@@ -114,12 +120,7 @@ def backend_clean_html(html):
         flags=re.DOTALL,
     )
 
-    html = re.sub(
-        r"<((?:strong|sup|sub|mark|em|u|del))><br />\s*\n</\1>",
-        "<br />\n",
-        html,
-        flags=re.MULTILINE,
-    )
+    # Collapse empty inline wrappers around a line break (single pass).
     html = re.sub(
         r"<((?:strong|sup|sub|mark|em|u|del))><br />\s*\n</\1>",
         "<br />\n",
@@ -263,6 +264,11 @@ def backend_convert_table_from_json(table_json):
 
 
 def backend_convert_table_to_json(table_html):
+    """Parse an HTML table into rows of raw-HTML cell strings.
+
+    Note: cells are intentionally kept as raw HTML strings (not parsed
+    into element dicts), so table round-trip equality is string-level.
+    """
     soup = BeautifulSoup(table_html, "html.parser")
     table = []
     rows = soup.find_all("tr")
@@ -317,6 +323,30 @@ def convert_docx_to_json(input_file_path, output_file_path):
         question_parts = question_text.split(".)", 1)
         question_number = question_parts[0].strip() if len(question_parts) > 1 else ""
         question = question_parts[1].strip() if len(question_parts) > 1 else ""
+
+        # Validate markers: every question needs all four options,
+        # an answer, an explanation and a stem. Fail loudly with the
+        # question number instead of silently producing empty fields.
+        label = (question_number + ".)") if question_number else "<unknown>)"
+        missing = [
+            name
+            for name, value in (
+                ("question stem", question),
+                ("option (a)", option_a),
+                ("option (b)", option_b),
+                ("option (c)", option_c),
+                ("option (d)", option_d),
+                ("answer", answer),
+                ("explanation", explanation),
+            )
+            if not value.strip()
+        ]
+        if missing:
+            raise ValueError(
+                f"Malformed question {label}: missing {', '.join(missing)}. "
+                "Expected format 'N.) question (a) .. (b) .. (c) .. (d) .. "
+                "Ans. .. Exp: ..'."
+            )
 
         # Create a JSON object
         data = {
@@ -390,6 +420,11 @@ def convert_docx_to_json(input_file_path, output_file_path):
     if output_file_path.endswith(".docx"):
         output_file_path = output_file_path.replace(".docx", ".json")
 
+    # NOTE: flags are intentionally asymmetric. docx -> html needs
+    # --mathml/--embed-resources so equations and images survive as
+    # MathML/data-URIs; html -> docx must NOT use --embed-resources
+    # (it rewrites data-URI/file-path <img> handling and breaks the
+    # image round trip).
     extra_args = ["--standalone", "--mathml", "--embed-resources"]
 
     html_content = pypandoc.convert_file(
@@ -402,21 +437,12 @@ def convert_docx_to_json(input_file_path, output_file_path):
     # Extract questions from the cleaned HTML content
     questions = extract_questions(cleaned_html)
 
-    # Round-trip through JSON serialization (normalizes whitespace/entities)
-    # using a unique temp file — safe for parallel runs.
-    fd, temp_json_file = tempfile.mkstemp(suffix=".json")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as json_file:
-            json.dump(questions, json_file, ensure_ascii=False, indent=4)
+    # Round-trip through JSON serialization in memory (normalizes
+    # whitespace/entities and proves serializability) without temp files.
+    questions = json.loads(json.dumps(questions, ensure_ascii=False))
 
-        with open(temp_json_file, "r", encoding="utf-8") as json_file:
-            questions = json.load(json_file)
-
-        # Process the questions to maintain sequence and convert elements
-        processed_questions = process_questions_with_elements(questions)
-    finally:
-        if os.path.exists(temp_json_file):
-            os.remove(temp_json_file)
+    # Process the questions to maintain sequence and convert elements
+    processed_questions = process_questions_with_elements(questions)
 
     # Save the final questions to a JSON file
     with open(output_file_path, "w", encoding="utf-8") as json_file:
@@ -433,7 +459,9 @@ def convert_json_to_docx(input_file_path, output_file_path):
     def create_html_from_json(json_data):
         html_output = "<html><body>"
         for question in json_data:
-            html_output += f"{question['question_num']} "
+            html_output += (
+                _escape_text_preserving_markup(question["question_num"]) + " "
+            )
             html_output += backend_convert_json_elements_to_html(
                 question["question_elements"]
             )
@@ -465,7 +493,9 @@ def convert_json_to_docx(input_file_path, output_file_path):
                 )
                 + "</p>"
             )
-            html_output += f"<p>Ans. {question['answer']}</p>"
+            html_output += (
+                "<p>Ans. " + _html.escape(question["answer"], quote=False) + "</p>"
+            )
             html_output += (
                 "<p>Exp: "
                 + backend_convert_json_elements_to_html(
@@ -477,14 +507,14 @@ def convert_json_to_docx(input_file_path, output_file_path):
         return html_output
 
     if not input_file_path.endswith(".json"):
-        return 0
+        raise ValueError(f"expected a .json input file, got: {input_file_path}")
 
     # replace  extension of output file to docx if  not alread
     if output_file_path.endswith(".json"):
         output_file_path = output_file_path.replace(".json", ".docx")
 
-    # Load the JSON data
-    with open(input_file_path, "r", encoding="utf-8", errors="ignore") as json_file:
+    # Load the JSON data (strict UTF-8: surface encoding errors loudly).
+    with open(input_file_path, "r", encoding="utf-8") as json_file:
         questions = json.load(json_file)
 
     # Create HTML content from JSON data

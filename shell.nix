@@ -1,3 +1,5 @@
+# Legacy nix-shell entrypoint. flake.nix is the canonical dev shell;
+# this file is kept for nix-shell users and mirrors it.
 let pkgs = import <nixpkgs> { };
 in pkgs.mkShell {
 
